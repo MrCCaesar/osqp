@@ -74,6 +74,29 @@ cmake_dependent_option( OSQP_COVERAGE_CHECK
                         OFF    # Default to off
                         OSQP_BUILD_UNITTESTS OFF ) # Force off if the unit tests aren't built
 
+# ----------------------------------------------
+# Find Eigen and libtorch dependencies
+# ----------------------------------------------
+option(OSQP_USE_RL_POLICY "Enable RL policy support" OFF)
+
+if(OSQP_USE_RL_POLICY)
+  # Find Eigen3
+  find_package(Eigen3 REQUIRED)
+  if(EIGEN3_FOUND)
+    message(STATUS "Found Eigen3: ${EIGEN3_INCLUDE_DIR}")
+  endif()
+
+  # Find Torch
+  find_package(Torch REQUIRED)
+  if(TORCH_FOUND)
+    message(STATUS "Found Torch: ${TORCH_INCLUDE_DIRS}")
+  endif()
+  
+  # Torch requires C++14 or higher
+  set(CMAKE_CXX_STANDARD 14)
+  set(CMAKE_CXX_STANDARD_REQUIRED ON)
+endif()
+
 set(OSQP_ALGEBRA_BACKEND
     "builtin"
     CACHE STRING "The Algebra to use (builtin/mkl/cuda)")
@@ -228,6 +251,11 @@ if(OSQP_CUSTOM_MEMORY)
   message(STATUS "Using custom memory management header: ${OSQP_CUSTOM_MEMORY}")
 endif()
 
+# Configure RL policy support
+if(OSQP_USE_RL_POLICY)
+  set(OSQP_ENABLE_RL_POLICY ON)
+endif()
+
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/configure/osqp_configure.h.in
                ${CMAKE_CURRENT_BINARY_DIR}/include/public/osqp_configure.h NEWLINE_STYLE LF)
 
@@ -328,6 +356,24 @@ endif()
 # ----------------------------------------------
 add_library(OSQPLIB OBJECT "")
 
+if(OSQP_USE_RL_POLICY)
+  enable_language(CXX)
+  target_sources(OSQPLIB PRIVATE
+       "${CMAKE_CURRENT_SOURCE_DIR}/src/rlpolicy.cpp"  # 改为 .cpp
+     )
+  
+  target_include_directories(OSQPLIB PRIVATE
+    ${EIGEN3_INCLUDE_DIR}
+    ${TORCH_INCLUDE_DIRS}
+  )
+  
+  target_link_libraries(OSQPLIB PRIVATE
+    ${TORCH_LIBRARIES}
+  )
+  
+  target_compile_definitions(OSQPLIB PRIVATE OSQP_USE_RL_POLICY)
+endif()
+
 add_subdirectory(include)
 add_subdirectory(src)
 add_subdirectory(algebra)
@@ -416,6 +462,15 @@ if( OSQP_BUILD_STATIC_LIB )
   target_include_directories(
     osqpstatic PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/public;${CMAKE_CURRENT_BINARY_DIR}/include/public>"
                       "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/osqp>")
+  
+  # Add RL policy dependencies
+  if(OSQP_USE_RL_POLICY)
+    target_include_directories(osqpstatic PRIVATE
+      ${EIGEN3_INCLUDE_DIR}
+      ${TORCH_INCLUDE_DIRS}
+    )
+    target_link_libraries(osqpstatic PUBLIC ${TORCH_LIBRARIES})
+  endif()
 endif()
 
 # ----------------------------------------------
@@ -448,6 +503,13 @@ if(OSQP_BUILD_SHARED_LIB)
   # Modify the soname of the library to include the algebra if desired
   if(OSQP_LIB_SUFFIX)
     set_target_properties(osqp PROPERTIES OUTPUT_NAME "osqp_${OSQP_LIB_SUFFIX}")
+  endif()
+  if(OSQP_USE_RL_POLICY)
+    target_include_directories(osqp PRIVATE
+      ${EIGEN3_INCLUDE_DIR}
+      ${TORCH_INCLUDE_DIRS}
+    )
+    target_link_libraries(osqp PRIVATE ${TORCH_LIBRARIES})
   endif()
 endif()
 
