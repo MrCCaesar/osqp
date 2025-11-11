@@ -1,18 +1,18 @@
-#include "glob_opts.h"
-#include "osqp.h"
 #include "auxil.h"
+#include "error.h"
+#include "glob_opts.h"
+#include "lin_alg.h"
+#include "osqp.h"
 #include "osqp_api_constants.h"
 #include "osqp_api_functions.h"
 #include "osqp_api_types.h"
-#include "util.h"
-#include "scaling.h"
-#include "error.h"
-#include "version.h"
-#include "lin_alg.h"
 #include "printing.h"
-#include "timing.h"
 #include "profilers.h"
-
+#include "rlpolicy.h"
+#include "scaling.h"
+#include "timing.h"
+#include "util.h"
+#include "version.h"
 
 #ifdef OSQP_CODEGEN
   #include "codegen.h"
@@ -306,8 +306,9 @@ void osqp_set_default_settings(OSQPSettings* settings) {
   settings->cg_tol_reduction = OSQP_CG_TOL_REDUCTION;        /* CG tolerance parameter */
   settings->cg_tol_fraction  = OSQP_CG_TOL_FRACTION;         /* CG tolerance parameter */
   settings->cg_precond       = OSQP_DIAGONAL_PRECONDITIONER; /* Preconditioner to use in CG */
-
+  settings->adaptive_rho_policy = (char*)OSQP_NULL;
   settings->adaptive_rho           = OSQP_ADAPTIVE_RHO_UPDATE_DEFAULT;
+  settings->adaptive_rho_rl = RLQP_ADAPTIVE_RHO_STANDARD;
   settings->adaptive_rho_interval  = OSQP_ADAPTIVE_RHO_INTERVAL;
   settings->adaptive_rho_fraction  = (OSQPFloat)OSQP_ADAPTIVE_RHO_FRACTION;
   settings->adaptive_rho_tolerance = (OSQPFloat)OSQP_ADAPTIVE_RHO_TOLERANCE;
@@ -424,8 +425,8 @@ OSQPInt osqp_setup(OSQPSolver**         solverp,
   work->y           = OSQPVectorf_calloc(m);
   if (!(work->x) || !(work->z) || !(work->xz_tilde))
     return osqp_error(OSQP_MEM_ALLOC_ERROR);
-  if (!(work->xtilde_view) || !(work->ztilde_view))
-      return osqp_error(OSQP_MEM_ALLOC_ERROR);
+  if (!(work->xtilde_view) || !(solver->work->ztilde_view))
+    return osqp_error(OSQP_MEM_ALLOC_ERROR);
   if (!(work->x_prev) || !(work->z_prev) || !(work->y))
     return osqp_error(OSQP_MEM_ALLOC_ERROR);
 
@@ -559,6 +560,7 @@ OSQPInt osqp_setup(OSQPSolver**         solverp,
   work->clear_update_time = 0;
   work->rho_update_from_solve = 0;
 # endif /* ifdef OSQP_ENABLE_PROFILING */
+  work->rl_rho_policy = rl_policy_load(settings->adaptive_rho_policy);
   solver->info->rho_updates   = 0;                      // Rho updates set to 0
   solver->info->rho_estimate  = solver->settings->rho;  // Best rho estimate
   solver->info->obj_val       = OSQP_INFTY;
@@ -1146,6 +1148,9 @@ OSQPInt osqp_cleanup(OSQPSolver* solver) {
 
     // Free information
     if (solver->info) c_free(solver->info);
+
+    // free rl policy
+    if (work->rl_rho_policy) rl_policy_unload(work->rl_rho_policy);
 
 # ifdef OSQP_ENABLE_PROFILING
     // Free timer

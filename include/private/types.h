@@ -138,7 +138,7 @@ struct OSQPWorkspace_ {
   /**
    * @name Primal and dual residuals workspace variables
    *
-   * Needed for residuals computation, tolerances computation,
+   * Needed for residua#include "types.h"ls computation, tolerances computation,
    * approximate tolerances computation and adapting rho
    * @{
    */
@@ -202,6 +202,9 @@ struct OSQPWorkspace_ {
   /// Reciprocal of rho
   OSQPFloat rho_inv;
 
+  /// @brief RL rho update policy
+  void* rl_rho_policy;
+
 # ifdef OSQP_ENABLE_PROFILING
   OSQPTimer* timer;       ///< timer object
 
@@ -217,7 +220,7 @@ struct OSQPWorkspace_ {
 
 # ifdef OSQP_ENABLE_PRINTING
   OSQPInt summary_printed; ///< Has last summary been printed? (true/false)
-# endif // ifdef OSQP_ENABLE_PRINTING
+#endif                     // ifdef OSQP_E#include "types.h"NABLE_PRINTING
 
 # ifdef OSQP_ENABLE_DERIVATIVES
   OSQPDerivativeData *derivative_data;

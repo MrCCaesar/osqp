@@ -3,7 +3,8 @@ target_sources(OSQPLIB PUBLIC
                "${CMAKE_CURRENT_SOURCE_DIR}/auxil.c"
                "${CMAKE_CURRENT_SOURCE_DIR}/error.c"
                "${CMAKE_CURRENT_SOURCE_DIR}/scaling.c"
-               "${CMAKE_CURRENT_SOURCE_DIR}/util.c")
+               "${CMAKE_CURRENT_SOURCE_DIR}/util.c"
+               "${CMAKE_CURRENT_SOURCE_DIR}/rlpolicy.cpp")
 
 # Source files that are needed for embedded code generation
 list( APPEND EMBEDDED_SRCS

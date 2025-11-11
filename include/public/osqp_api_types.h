@@ -73,12 +73,16 @@ typedef struct OSQP_ATTR_PACK {
   OSQPInt           cg_tol_reduction; ///< number of consecutive zero CG iterations before the tolerance gets halved
   OSQPFloat         cg_tol_fraction;  ///< CG tolerance (fraction of ADMM residuals)
   osqp_precond_type cg_precond;       ///< Preconditioner to use in the CG method
-
+  const char* adaptive_rho_policy;    ///< rl policy file name>
   // adaptive rho logic
   /**
    * rho stepsize adaption method
    */
   OSQPInt adaptive_rho;
+  /**
+   * rho adaption method
+   */
+  enum rlqp_adaptive_rho_type adaptive_rho_rl;
 
   /**
    * Interval between rho adaptations

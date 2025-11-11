@@ -12,7 +12,8 @@ set(osqp_headers_private
     "${CMAKE_CURRENT_SOURCE_DIR}/private/scaling.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/private/timing.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/private/types.h"
-    "${CMAKE_CURRENT_SOURCE_DIR}/private/util.h")
+    "${CMAKE_CURRENT_SOURCE_DIR}/private/util.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/private/rlpolicy.h")
 
 set(osqp_headers_public
     "${CMAKE_CURRENT_SOURCE_DIR}/public/osqp.h"

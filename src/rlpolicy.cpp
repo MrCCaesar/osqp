@@ -1,8 +1,12 @@
+#include "rlpolicy.h"
+
 #include <torch/script.h>
 #include <torch/torch.h>
 
-#include "private/rlpolicy.h"
+#include <Eigen/Dense>
 
+#include "algebra_impl.h"
+#include "types.h"
 
 namespace rlqp {
     struct Policy {
@@ -19,7 +23,8 @@ void *rl_policy_load(const char *module_path) {
     rlqp::Policy* policy = new rlqp::Policy();
     try {
         policy->baseModule_ = torch::jit::load(module_path);
-        policy->module_ = torch::jit::optimize_for_inference(policy->baseModule_);
+        policy->module_ =
+            torch::jit::optimize_for_inference(policy->baseModule_);
         std::clog << "Loaded model " << module_path << std::endl;
         return policy;
     } catch (const c10::Error& ex) {
@@ -37,49 +42,49 @@ int rl_policy_unload(void *ptr) {
 }
 
 int rl_policy_compute_vec(OSQPWorkspace* work) {
-    using namespace Eigen;
+  using namespace Eigen;
 
-    rlqp::Policy *policy = static_cast<rlqp::Policy*>(work->rl_rho_policy);
-    if (policy == nullptr)
-        return 1;
+  rlqp::Policy* policy = static_cast<rlqp::Policy*>(work->rl_rho_policy);
+  if (policy == nullptr) return 1;
 
-    static constexpr int stride = 6;
-    using QPVec = Array<c_float, Eigen::Dynamic, 1>;
-    using RLVec = Array<float, Eigen::Dynamic, 1>;
-    using InputVec = Array<float, Eigen::Dynamic, stride, Eigen::RowMajor | Eigen::DontAlign>;
+  static constexpr int stride = 6;
+  using QPVec = Array<OSQPFloat, Eigen::Dynamic, 1>;
+  using RLVec = Array<float, Eigen::Dynamic, 1>;
+  using InputVec =
+      Array<float, Eigen::Dynamic, stride, Eigen::RowMajor | Eigen::DontAlign>;
 
-    int m = (int)work->data->m;
-    
-    // create Eigen wrappers for the vectors (these are zero-copy)
-    Map<QPVec> l(work->data->l, m);
-    Map<QPVec> u(work->data->u, m);
-    Map<QPVec> z(work->z, m);
-    Map<QPVec> y(work->y, m);
-    Map<QPVec> Ax(work->Ax, m);
-    Map<QPVec> rhoVec(work->rho_vec, m);
+  int m = (int)work->data->m;
 
-    // Allocate uninitialized tensor, then copy in the data (once)
-    at::Tensor piInputs = torch::empty(
-        {m, stride},
-        torch::dtype(torch::kFloat32).requires_grad(false));
+  // create Eigen wrappers for the vectors (these are zero-copy)
+  Map<QPVec> l(work->data->l->values, m);
+  Map<QPVec> u(work->data->u->values, m);
+  Map<QPVec> z(work->z->values, m);
+  Map<QPVec> y(work->y->values, m);
+  Map<QPVec> Ax(work->Ax->values, m);
+  Map<QPVec> rhoVec(work->rho_vec->values, m);
 
-    Map<InputVec> inputData(static_cast<float*>(piInputs.data_ptr()), m, stride);
-    inputData.col(0) = Ax.template cast<float>();
-    inputData.col(1) = y.template cast<float>();
-    inputData.col(2) = z.template cast<float>();
-    inputData.col(3) = l.template cast<float>();
-    inputData.col(4) = u.template cast<float>();
-    inputData.col(5) = rhoVec.template cast<float>();
+  // Allocate uninitialized tensor, then copy in the data (once)
+  at::Tensor piInputs = torch::empty(
+      {m, stride}, torch::dtype(torch::kFloat32).requires_grad(false));
 
-    // Compute the policy value based on the input
-    at::Tensor piOutput = policy->module_.forward({{piInputs}}).toTensor();
+  Map<InputVec> inputData(static_cast<float*>(piInputs.data_ptr()), m, stride);
+  inputData.col(0) = Ax.template cast<float>();
+  inputData.col(1) = y.template cast<float>();
+  inputData.col(2) = z.template cast<float>();
+  inputData.col(3) = l.template cast<float>();
+  inputData.col(4) = u.template cast<float>();
+  inputData.col(5) = rhoVec.template cast<float>();
 
-    // Store (after casting) the values to the rho vector.
-    rhoVec = Map<RLVec>(piOutput.data_ptr<float>(), m).template cast<c_float>();
-    
-    // assert(rhoVec.allFinite()); // TODO: this is useful for debugging, but should probably be replaced for regular usage
+  // Compute the policy value based on the input
+  at::Tensor piOutput = policy->module_.forward({{piInputs}}).toTensor();
 
-    Map<QPVec>(work->rho_inv_vec, m) = 1 / rhoVec;
-    
-    return 0;
+  // Store (after casting) the values to the rho vector.
+  rhoVec = Map<RLVec>(piOutput.data_ptr<float>(), m).template cast<OSQPFloat>();
+
+  // assert(rhoVec.allFinite()); // TODO: this is useful for debugging, but
+  // should probably be replaced for regular usage
+
+  Map<QPVec>(work->rho_inv_vec->values, m) = 1 / rhoVec;
+
+  return 0;
 }

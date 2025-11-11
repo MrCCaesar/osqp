@@ -5,7 +5,7 @@
 extern "C" {
 # endif // ifdef __cplusplus
 
-# include "public/osqp_api_types.h"
+#include "osqp.h"
 
 void *rl_policy_load(const char* module_path);
 int rl_policy_unload(void *policy);
