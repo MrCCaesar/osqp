@@ -23,9 +23,7 @@ OSQPSettings largeqp_settings = {
     20,
     10,
     (OSQPFloat)0.14999999999999999445,
-    OSQP_DIAGONAL_PRECONDITIONER,
-    (char*)OSQP_NULL,
-    1,
+    OSQP_DIAGONAL_PRECONDITIONER,  // adaptive_rho_rl - 新增字段，初始化为 0
     1,
     0,
     (OSQPFloat)0.40000000000000002220,

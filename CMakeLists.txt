@@ -74,43 +74,15 @@ cmake_dependent_option( OSQP_COVERAGE_CHECK
                         OFF    # Default to off
                         OSQP_BUILD_UNITTESTS OFF ) # Force off if the unit tests aren't built
 
-if(NOT TARGET torch)
-    if(NOT DEFINED Torch_DIR)
-        find_package(Python COMPONENTS Interpreter REQUIRED)
-        
-        execute_process(
-            COMMAND ${Python_EXECUTABLE} -c "import torch; print(torch.utils.cmake_prefix_path)"
-            OUTPUT_VARIABLE TORCH_CMAKE_PATH
-            OUTPUT_STRIP_TRAILING_WHITESPACE
-            RESULT_VARIABLE TORCH_PYTHON_RESULT
-        )
-        
-        if(TORCH_PYTHON_RESULT EQUAL 0 AND TORCH_CMAKE_PATH)
-            list(APPEND CMAKE_PREFIX_PATH ${TORCH_CMAKE_PATH})
-            message(STATUS "Auto-detected Torch from Python: ${TORCH_CMAKE_PATH}")
-        else()
-            message(WARNING "Could not auto-detect Torch from Python environment")
-        endif()
-    endif()
-
-    # Find Torch
-    find_package(Torch REQUIRED)
-    if(TORCH_FOUND)
-      message(STATUS "Found Torch: ${TORCH_INCLUDE_DIRS}")
-    endif()
-else()
-    message(STATUS "Using Torch from parent project")
-endif()
-
 find_package(Eigen3 REQUIRED)
 if(EIGEN3_FOUND)
   message(STATUS "Found Eigen3: ${EIGEN3_INCLUDE_DIR}")
 endif()
 
-# Find Torch
 find_package(Torch REQUIRED)
 if(TORCH_FOUND)
   message(STATUS "Found Torch: ${TORCH_INCLUDE_DIRS}")
+  message(STATUS "Found Torch libraries: ${TORCH_LIBRARIES}")
 endif()
 
 # Torch requires C++14 or higher
@@ -379,19 +351,6 @@ if(TORCH_FOUND)
       ${TORCH_INCLUDE_DIRS}
       ${EIGEN3_INCLUDE_DIR}
   )
-  
-  # 如果需要，添加Torch的编译选项
-  target_compile_options(OSQPLIB 
-    PRIVATE 
-      $<$<COMPILE_LANGUAGE:CXX>:${TORCH_CXX_FLAGS}>
-  )
-  
-  # 添加必要的预处理器定义
-  target_compile_definitions(OSQPLIB
-    PRIVATE
-      USE_TORCH
-      USE_EIGEN
-  )
 endif()
 
 add_subdirectory(include)
@@ -522,11 +481,11 @@ if(OSQP_BUILD_SHARED_LIB)
   if(OSQP_LIB_SUFFIX)
     set_target_properties(osqp PROPERTIES OUTPUT_NAME "osqp_${OSQP_LIB_SUFFIX}")
   endif()
-  target_include_directories(osqpstatic PRIVATE
+  target_include_directories(osqp PRIVATE
     ${EIGEN3_INCLUDE_DIR}
     ${TORCH_INCLUDE_DIRS}
   )
-  target_link_libraries(osqpstatic PUBLIC ${TORCH_LIBRARIES})
+  target_link_libraries(osqp PUBLIC  ${TORCH_LIBRARIES})
 endif()
 
 # ----------------------------------------------
