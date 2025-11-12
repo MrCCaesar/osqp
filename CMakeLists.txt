@@ -74,6 +74,23 @@ cmake_dependent_option( OSQP_COVERAGE_CHECK
                         OFF    # Default to off
                         OSQP_BUILD_UNITTESTS OFF ) # Force off if the unit tests aren't built
 
+if(NOT DEFINED Torch_DIR)
+    find_package(Python COMPONENTS Interpreter REQUIRED)
+    
+    execute_process(
+        COMMAND ${Python_EXECUTABLE} -c "import torch; print(torch.utils.cmake_prefix_path)"
+        OUTPUT_VARIABLE TORCH_CMAKE_PATH
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        RESULT_VARIABLE TORCH_PYTHON_RESULT
+    )
+    
+    if(TORCH_PYTHON_RESULT EQUAL 0 AND TORCH_CMAKE_PATH)
+        list(APPEND CMAKE_PREFIX_PATH ${TORCH_CMAKE_PATH})
+        message(STATUS "Auto-detected Torch from Python: ${TORCH_CMAKE_PATH}")
+    else()
+        message(WARNING "Could not auto-detect Torch from Python environment")
+    endif()
+endif()
 
 find_package(Eigen3 REQUIRED)
 if(EIGEN3_FOUND)
