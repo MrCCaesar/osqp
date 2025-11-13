@@ -370,7 +370,6 @@ get_property(
   osqplib_link_libs
   TARGET OSQPLIB
   PROPERTY LINK_LIBRARIES)
-
 # ----------------------------------------------
 # Language-specific compilation checks
 # ----------------------------------------------
@@ -447,7 +446,12 @@ if( OSQP_BUILD_STATIC_LIB )
     ${EIGEN3_INCLUDE_DIR}
     ${TORCH_INCLUDE_DIRS}
   )
-  target_link_libraries(osqpstatic PUBLIC ${TORCH_LIBRARIES})
+  foreach(lib ${TORCH_LIBRARIES})
+    if(EXISTS ${lib})
+      target_link_libraries(osqpstatic PUBLIC ${lib})
+    endif()
+  endforeach()
+  # target_link_libraries(osqpstatic PUBLIC torch ${TORCH_LIBRARIES})
 endif()
 
 # ----------------------------------------------
@@ -485,7 +489,12 @@ if(OSQP_BUILD_SHARED_LIB)
     ${EIGEN3_INCLUDE_DIR}
     ${TORCH_INCLUDE_DIRS}
   )
-  target_link_libraries(osqp PUBLIC  ${TORCH_LIBRARIES})
+  foreach(lib ${TORCH_LIBRARIES})
+    if(EXISTS ${lib})
+      target_link_libraries(osqp PUBLIC ${lib})
+    endif()
+  endforeach()
+  # target_link_libraries(osqp PUBLIC torch ${TORCH_LIBRARIES})
 endif()
 
 # ----------------------------------------------
