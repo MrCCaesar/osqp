@@ -84,6 +84,7 @@ if(TORCH_FOUND)
   message(STATUS "Found Torch: ${TORCH_INCLUDE_DIRS}")
   message(STATUS "Found Torch libraries: ${TORCH_LIBRARIES}")
 endif()
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${TORCH_CXX_FLAGS}")
 
 # Torch requires C++14 or higher
 set(CMAKE_CXX_STANDARD 17)
@@ -446,12 +447,24 @@ if( OSQP_BUILD_STATIC_LIB )
     ${EIGEN3_INCLUDE_DIR}
     ${TORCH_INCLUDE_DIRS}
   )
-  foreach(lib ${TORCH_LIBRARIES})
-    if(EXISTS ${lib})
-      target_link_libraries(osqpstatic PUBLIC ${lib})
-    endif()
-  endforeach()
-  # target_link_libraries(osqpstatic PUBLIC torch ${TORCH_LIBRARIES})
+  # foreach(lib ${TORCH_LIBRARIES})
+  #   if(EXISTS ${lib})
+  #     target_link_libraries(osqpstatic PUBLIC ${lib})
+  #   endif()
+  # endforeach()
+  list(GET TORCH_INCLUDE_DIRS 0 TORCH_FIRST_INCLUDE_DIR)
+  get_filename_component(TORCH_ROOT "${TORCH_FIRST_INCLUDE_DIR}" DIRECTORY)
+  set(TORCH_LIB_DIR "${TORCH_ROOT}/lib")
+
+  message(STATUS "TORCH_ROOT: ${TORCH_ROOT}")
+  message(STATUS "TORCH_LIB_DIR: ${TORCH_LIB_DIR}")
+
+  # Link torch libraries explicitly using file paths
+  target_link_libraries(osqpstatic PUBLIC 
+    "${TORCH_LIB_DIR}/libtorch.so"
+    "${TORCH_LIB_DIR}/libtorch_cpu.so"
+    "${TORCH_LIB_DIR}/libc10.so"
+  )
 endif()
 
 # ----------------------------------------------
@@ -489,12 +502,19 @@ if(OSQP_BUILD_SHARED_LIB)
     ${EIGEN3_INCLUDE_DIR}
     ${TORCH_INCLUDE_DIRS}
   )
-  foreach(lib ${TORCH_LIBRARIES})
-    if(EXISTS ${lib})
-      target_link_libraries(osqp PUBLIC ${lib})
-    endif()
-  endforeach()
-  # target_link_libraries(osqp PUBLIC torch ${TORCH_LIBRARIES})
+  list(GET TORCH_INCLUDE_DIRS 0 TORCH_FIRST_INCLUDE_DIR)
+  get_filename_component(TORCH_ROOT "${TORCH_FIRST_INCLUDE_DIR}" DIRECTORY)
+  set(TORCH_LIB_DIR "${TORCH_ROOT}/lib")
+
+  message(STATUS "TORCH_ROOT: ${TORCH_ROOT}")
+  message(STATUS "TORCH_LIB_DIR: ${TORCH_LIB_DIR}")
+
+  # Link torch libraries explicitly using file paths
+  target_link_libraries(osqp PUBLIC 
+    "${TORCH_LIB_DIR}/libtorch.so"
+    "${TORCH_LIB_DIR}/libtorch_cpu.so"
+    "${TORCH_LIB_DIR}/libc10.so"
+  )
 endif()
 
 # ----------------------------------------------
